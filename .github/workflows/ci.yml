@@ -1,5 +1,6 @@
 
-name: Premium Prediction CI
+
+name: Premium Prediction CI/CD
 
 on:
   push:
@@ -11,8 +12,8 @@ on:
       - main
 
 jobs:
-  build:
-    name: Test and Build Docker Image
+  build-and-push:
+    name: Test, Build and Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
@@ -33,6 +34,21 @@ jobs:
         run: |
           python -c "import streamlit, pandas, numpy, sklearn, xgboost, pyarrow, joblib; print('All imports successful')"
 
-      - name: Build Docker image
-        run: |
-          docker build -t premium-prediction:ci .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            balubodramoni/premium-prediction:latest
+            balubodramoni/premium-prediction:${{ github.sha }}
